@@ -1,47 +1,113 @@
 'use client';
 
-import {useEffect, useState} from 'react';
-import {useSearchParams} from 'next/navigation';
+import { useEffect, useState, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import WeightChart from '@/components/WeightChart';
-import Link from 'next/link';
+import Navbar from '@/components/Navbar';
 
-export default function Home() {
-	const searchParams = useSearchParams();
-	const [tokens, setTokens] = useState<{
-		access_token?: string;
-		refresh_token?: string;
-		userid?: string;
-		expires_in?: string;
-	} | null>(null);
-	const [measurements, setMeasurements] = useState<any>(null);
-	const [loading, setLoading] = useState(false);
-	const [error, setError] = useState<string | null>(null);
+// Force dynamic rendering to avoid SSR issues with localStorage
+export const dynamic = 'force-dynamic';
 
-	useEffect(() => {
-		// Check if we got tokens from the callback
-		if (searchParams.get('success') === 'true') {
-			const tokenData = {
-				access_token: searchParams.get('access_token') || undefined,
-				refresh_token: searchParams.get('refresh_token') || undefined,
-				userid: searchParams.get('userid') || undefined,
-				expires_in: searchParams.get('expires_in') || undefined,
-			};
-			setTokens(tokenData);
+function HomeContent() {
+  const searchParams = useSearchParams();
+  const [currentUserid, setCurrentUserid] = useState<string | null>(null);
+  // ...existing code...
+  const [allUsers, setAllUsers] = useState<Array<{
+    access_token?: string;
+    refresh_token?: string;
+    userid?: string;
+    expires_in?: string;
+  }>>([]);
+  const [tokens, setTokens] = useState<{
+    access_token?: string;
+    refresh_token?: string;
+    userid?: string;
+    expires_in?: string;
+  } | null>(null);
+  const [measurements, setMeasurements] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-			// Store in localStorage for persistence (not secure for production!)
-			if (tokenData.access_token) {
-				localStorage.setItem('withings_tokens', JSON.stringify(tokenData));
-			}
-		} else if (searchParams.get('error')) {
-			setError(searchParams.get('error') || 'Unknown error');
-		} else {
-			// Try to load tokens from localStorage
-			const stored = localStorage.getItem('withings_tokens');
-			if (stored) {
-				setTokens(JSON.parse(stored));
-			}
-		}
-	}, [searchParams]);
+  // Load users from localStorage
+  const loadUsers = () => {
+    const stored = localStorage.getItem('withings_users');
+    if (stored) {
+      const users = JSON.parse(stored);
+      setAllUsers(Array.isArray(users) ? users : []);
+      return Array.isArray(users) ? users : [];
+    }
+    return [];
+  };
+
+  // Save users to localStorage
+  const saveUsers = (users: typeof allUsers) => {
+    localStorage.setItem('withings_users', JSON.stringify(users));
+    setAllUsers(users);
+  };
+
+  // Switch to a specific user
+  const switchToUser = (userid: string) => {
+    const user = allUsers.find(u => u.userid === userid);
+    if (user) {
+      setCurrentUserid(userid);
+      setTokens(user);
+      localStorage.setItem('withings_current_userid', userid);
+      setMeasurements(null); // Clear measurements when switching
+    }
+  };
+
+  useEffect(() => {
+    // Load all users
+    const users = loadUsers();
+
+    // Check if we got tokens from the callback
+    if (searchParams.get('success') === 'true') {
+      const tokenData = {
+        access_token: searchParams.get('access_token') || undefined,
+        refresh_token: searchParams.get('refresh_token') || undefined,
+        userid: searchParams.get('userid') || undefined,
+        expires_in: searchParams.get('expires_in') || undefined,
+      };
+
+      if (tokenData.userid) {
+        // Add or update user in the list
+        const existingIndex = users.findIndex(u => u.userid === tokenData.userid);
+        let updatedUsers;
+        if (existingIndex >= 0) {
+          updatedUsers = [...users];
+          updatedUsers[existingIndex] = tokenData;
+        } else {
+          updatedUsers = [...users, tokenData];
+        }
+
+        localStorage.setItem('withings_users', JSON.stringify(updatedUsers));
+        setAllUsers(updatedUsers);
+        setCurrentUserid(tokenData.userid);
+        setTokens(tokenData);
+        localStorage.setItem('withings_current_userid', tokenData.userid);
+      }
+    } else if (searchParams.get('error')) {
+      setError(searchParams.get('error') || 'Unknown error');
+    } else {
+      // Try to load the last active user
+      const lastUserid = localStorage.getItem('withings_current_userid');
+      if (lastUserid && users.length > 0) {
+        const user = users.find(u => u.userid === lastUserid);
+        if (user) {
+          setCurrentUserid(lastUserid);
+          setTokens(user);
+        } else if (users.length > 0) {
+          // Fallback to first user if last user not found
+          setCurrentUserid(users[0].userid!);
+          setTokens(users[0]);
+        }
+      } else if (users.length > 0) {
+        // No last user, use first available
+        setCurrentUserid(users[0].userid!);
+        setTokens(users[0]);
+      }
+    }
+  }, [searchParams]);
 
 	const handleConnect = () => {
 		window.location.href = '/api/auth/withings';
@@ -74,59 +140,71 @@ export default function Home() {
 		}
 	};
 
-	const handleDisconnect = () => {
-		localStorage.removeItem('withings_tokens');
-		setTokens(null);
-		setMeasurements(null);
-		window.history.replaceState({}, '', '/');
-	};
+  const handleDisconnect = () => {
+    if (!currentUserid) return;
+
+    // Remove current user from the list
+    const updatedUsers = allUsers.filter(u => u.userid !== currentUserid);
+    saveUsers(updatedUsers);
+
+    // Switch to another user if available, otherwise clear
+    if (updatedUsers.length > 0) {
+      switchToUser(updatedUsers[0].userid!);
+    } else {
+      setCurrentUserid(null);
+      setTokens(null);
+      setMeasurements(null);
+      localStorage.removeItem('withings_current_userid');
+    }
+
+    window.history.replaceState({}, '', '/');
+  };
+
+  const handleAddUser = () => {
+    window.location.href = '/api/auth/withings';
+  };
 
 	return (
 		<div className="min-h-screen bg-zinc-50 p-8 font-sans dark:bg-black">
 			<main className="w-full">
 				<div className="rounded-lg bg-white p-8 shadow-sm dark:bg-zinc-900">
+					<Navbar
+						currentUserid={currentUserid || undefined}
+						onUserChange={switchToUser}
+						onAddUser={handleAddUser}
+					/>
 
-					<div className="flex flex-row justify-between items-center">
+					{error && (
+						<div className="mb-4 rounded-md bg-red-50 p-4 dark:bg-red-900/20">
+							<p className="text-sm text-red-800 dark:text-red-400">
+								Error: {error}
+							</p>
+						</div>
+					)}
 
-						<h1 className="mb-6 text-3xl font-bold text-zinc-900 dark:text-zinc-50">
-							<Link href="/">Withings Health Monitor</Link>
-						</h1>
-
-						{error && (
-							<div className="mb-4 rounded-md bg-red-50 p-4 dark:bg-red-900/20">
-								<p className="text-sm text-red-800 dark:text-red-400">
-									Error: {error}
+					{!tokens ? (
+						<div className="space-y-4">
+							<p className="text-zinc-600 dark:text-zinc-400">
+								Connect your Withings account to view your health data.
+							</p>
+							<button
+								onClick={handleConnect}
+								className="rounded-md bg-blue-600 px-6 py-3 text-white transition-colors hover:bg-blue-700"
+							>
+								Connect Withings Account
+							</button>
+						</div>
+					) : (
+						<div className="space-y-6">
+							<div className="rounded-md bg-green-50 p-4 dark:bg-green-900/20">
+								<p className="text-sm font-medium text-green-800 dark:text-green-400">
+									✓ Connected to Withings
+								</p>
+								<p className="mt-1 text-xs text-green-700 dark:text-green-500">
+									User ID: {tokens.userid}
 								</p>
 							</div>
-						)}
 
-						{!tokens ? (
-							<div className="space-y-4">
-								<p className="text-zinc-600 dark:text-zinc-400">
-									Connect your Withings account to view your health data.
-								</p>
-								<button
-									onClick={handleConnect}
-									className="rounded-md bg-blue-600 px-6 py-3 text-white transition-colors hover:bg-blue-700"
-								>
-									Connect Withings Account
-								</button>
-							</div>
-						) : (
-							<div className="space-y-6">
-								<div className="rounded-md bg-green-50 p-4 dark:bg-green-900/20">
-									<p className="text-sm font-medium text-green-800 dark:text-green-400">
-										✓ Connected to Withings
-									</p>
-									<p className="mt-1 text-xs text-green-700 dark:text-green-500">
-										User ID: {tokens.userid}
-									</p>
-								</div>
-							</div>
-						)}
-					</div>
-
-					{tokens && (<div>
 							{/* Weight Chart */}
 							{tokens.userid && (
 								<WeightChart userid={tokens.userid}/>
@@ -155,7 +233,7 @@ export default function Home() {
 									</summary>
 									<pre className="mt-2 overflow-x-auto text-xs text-zinc-600 dark:text-zinc-400">
                     {JSON.stringify(tokens, null, 2)}
-                  </pre>
+									</pre>
 								</details>
 							</div>
 
@@ -165,8 +243,8 @@ export default function Home() {
 										Measurements
 									</h2>
 									<pre className="overflow-x-auto text-xs text-zinc-600 dark:text-zinc-400">
-                    {JSON.stringify(measurements, null, 2)}
-                  </pre>
+										{JSON.stringify(measurements, null, 2)}
+									</pre>
 								</div>
 							)}
 						</div>
@@ -176,3 +254,16 @@ export default function Home() {
 		</div>
 	);
 }
+
+export default function Home() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
+        <div className="text-zinc-600 dark:text-zinc-400">Loading...</div>
+      </div>
+    }>
+      <HomeContent />
+    </Suspense>
+  );
+}
+

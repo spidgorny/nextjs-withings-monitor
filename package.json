@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "fetch-year": "tsx scripts/fetch-year.ts"
+    "fetch-year": "tsx scripts/fetch-year.ts",
+    "validate-env": "tsx scripts/validate-env.ts"
   },
   "dependencies": {
     "axios": "^1.13.2",

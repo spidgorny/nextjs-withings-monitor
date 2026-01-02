@@ -46,6 +46,26 @@ A Next.js application to connect to Withings health devices and monitor your hea
 To fetch and store a full year of data locally:
 
 1. **Update `.env.json` with your tokens:**
+   
+   **Multi-user format (recommended):**
+   ```json
+   {
+     "slawa": {
+       "access_token": "your_access_token",
+       "refresh_token": "your_refresh_token",
+       "userid": "1372655",
+       "expires_in": "10800"
+     },
+     "marina": {
+       "access_token": "another_access_token",
+       "refresh_token": "another_refresh_token",
+       "userid": "1393344",
+       "expires_in": "10800"
+     }
+   }
+   ```
+   
+   **Legacy single-user format:**
    ```json
    {
      "access_token": "your_access_token",
@@ -55,14 +75,23 @@ To fetch and store a full year of data locally:
    ```
 
 2. **Run the fetch script:**
+   
+   **Multi-user format:**
+   ```bash
+   npm run fetch-year slawa 2024
+   npm run fetch-year marina 2025
+   ```
+   
+   Or without specifying year (uses current year):
+   ```bash
+   npm run fetch-year slawa
+   ```
+   
+   **Legacy format:**
    ```bash
    npm run fetch-year 2024
    ```
 
-   Or for a different year:
-   ```bash
-   npm run fetch-year 2023
-   ```
 
 This will:
 - Fetch data month by month for the specified year
