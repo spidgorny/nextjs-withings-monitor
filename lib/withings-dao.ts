@@ -169,4 +169,20 @@ export class WithingsDAO {
             throw error;
         }
     }
+
+    /**
+     * Get the last modified timestamp for a specific month's data file
+     */
+    async getLastModified(userid: string, year: number, month: number): Promise<Date | null> {
+        try {
+            const filePath = this.getFilePath(userid, year, month);
+            const stats = await fs.stat(filePath);
+            return stats.mtime;
+        } catch (error) {
+            if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+                return null;
+            }
+            throw error;
+        }
+    }
 }

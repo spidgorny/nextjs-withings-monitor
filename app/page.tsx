@@ -205,10 +205,10 @@ function HomeContent() {
 								</p>
 							</div>
 
-							{/* Weight Chart */}
-							{tokens.userid && (
-								<WeightChart userid={tokens.userid}/>
-							)}
+						{/* Weight Chart */}
+						{tokens.userid && (
+							<WeightChart userid={tokens.userid} accessToken={tokens.access_token}/>
+						)}
 
 							<div className="space-y-3">
 								<div className="flex gap-3">

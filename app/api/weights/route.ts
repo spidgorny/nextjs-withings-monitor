@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     const months = await dao.listMonths(userid);
 
     if (months.length === 0) {
-      return NextResponse.json({ weights: [] });
+      return NextResponse.json({ weights: [], lastModified: null });
     }
 
     const weights: WeightData[] = [];
@@ -54,7 +54,16 @@ export async function GET(request: NextRequest) {
     // Sort by timestamp ascending
     weights.sort((a, b) => a.timestamp - b.timestamp);
 
-    return NextResponse.json({ weights });
+    // Get last modified timestamp for the current month
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+    const lastModified = await dao.getLastModified(userid, currentYear, currentMonth);
+
+    return NextResponse.json({
+      weights,
+      lastModified: lastModified ? lastModified.toISOString() : null
+    });
   } catch (error) {
     console.error('Error fetching weight data:', error);
     return NextResponse.json(
