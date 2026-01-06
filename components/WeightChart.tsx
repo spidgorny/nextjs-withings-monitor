@@ -13,11 +13,12 @@ interface WeightData {
 interface WeightChartProps {
   userid: string;
   accessToken?: string;
+  onTokensUpdated?: (tokens: { access_token: string; refresh_token: string; userid: string; expires_in: string }) => void;
 }
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
-export default function WeightChart({ userid, accessToken }: WeightChartProps) {
+export default function WeightChart({ userid, accessToken, onTokensUpdated }: WeightChartProps) {
   const [isFetching, setIsFetching] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
@@ -54,6 +55,13 @@ export default function WeightChart({ userid, accessToken }: WeightChartProps) {
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to fetch data');
+      }
+
+      const result = await response.json();
+
+      // If tokens were refreshed, update them in the parent component
+      if (result.tokens && onTokensUpdated) {
+        onTokensUpdated(result.tokens);
       }
 
       // Revalidate SWR cache to get the updated data

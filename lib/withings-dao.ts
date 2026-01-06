@@ -1,6 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
-import { getMeasurements } from './withings';
+import { getMeasurements, refreshAccessToken, isInvalidTokenError } from './withings';
+import { getTokensByUserId, updateUserTokensByUserId } from './env-config';
 
 export interface MeasurementData {
     userid: string;
@@ -53,11 +54,59 @@ export class WithingsDAO {
         console.log(`Fetching data for ${year}-${month.toString().padStart(2, '0')}...`);
         console.log(`  Date range: ${startDate.toISOString()} to ${endDate.toISOString()}`);
 
-        // Fetch measurements from Withings API
-        const measurements = await getMeasurements(accessToken, {
-            startdate: startTimestamp,
-            enddate: endTimestamp,
-        });
+        let currentAccessToken = accessToken;
+        let measurements;
+
+        try {
+            // Fetch measurements from Withings API
+            measurements = await getMeasurements(currentAccessToken, {
+                startdate: startTimestamp,
+                enddate: endTimestamp,
+            });
+        } catch (error) {
+            // Check if it's a 401 invalid token error
+            if (isInvalidTokenError(error)) {
+                console.log('  ⚠ Access token expired, refreshing...');
+
+                // Get user tokens from .env.json
+                const userConfig = await getTokensByUserId(userid);
+                if (!userConfig) {
+                    throw new Error(`User with userid "${userid}" not found in .env.json`);
+                }
+
+                const clientId = process.env.WITHINGS_CLIENT_ID;
+                const clientSecret = process.env.WITHINGS_CLIENT_SECRET;
+
+                if (!clientId || !clientSecret) {
+                    throw new Error('WITHINGS_CLIENT_ID and WITHINGS_CLIENT_SECRET must be set');
+                }
+
+                // Refresh the token
+                const newTokens = await refreshAccessToken(
+                    clientId,
+                    clientSecret,
+                    userConfig.tokens.refresh_token
+                );
+
+                // Update .env.json with new tokens
+                await updateUserTokensByUserId(userid, {
+                    access_token: newTokens.access_token,
+                    refresh_token: newTokens.refresh_token,
+                    expires_in: newTokens.expires_in.toString(),
+                });
+
+                console.log('  ✓ Token refreshed successfully');
+
+                // Retry with new token
+                currentAccessToken = newTokens.access_token;
+                measurements = await getMeasurements(currentAccessToken, {
+                    startdate: startTimestamp,
+                    enddate: endTimestamp,
+                });
+            } else {
+                throw error;
+            }
+        }
 
         const data: MeasurementData = {
             userid,

@@ -164,6 +164,24 @@ function HomeContent() {
     window.location.href = '/api/auth/withings';
   };
 
+  const handleTokensUpdated = (newTokens: {
+    access_token: string;
+    refresh_token: string;
+    userid: string;
+    expires_in: string;
+  }) => {
+    // Update the tokens in state
+    setTokens(newTokens);
+
+    // Update the tokens in localStorage
+    const existingIndex = allUsers.findIndex(u => u.userid === newTokens.userid);
+    if (existingIndex >= 0) {
+      const updatedUsers = [...allUsers];
+      updatedUsers[existingIndex] = newTokens;
+      saveUsers(updatedUsers);
+    }
+  };
+
 	return (
 		<div className="min-h-screen bg-zinc-50 p-8 font-sans dark:bg-black">
 			<main className="w-full">
@@ -196,18 +214,14 @@ function HomeContent() {
 						</div>
 					) : (
 						<div className="space-y-6">
-							<div className="rounded-md bg-green-50 p-4 dark:bg-green-900/20">
-								<p className="text-sm font-medium text-green-800 dark:text-green-400">
-									✓ Connected to Withings
-								</p>
-								<p className="mt-1 text-xs text-green-700 dark:text-green-500">
-									User ID: {tokens.userid}
-								</p>
-							</div>
 
 						{/* Weight Chart */}
 						{tokens.userid && (
-							<WeightChart userid={tokens.userid} accessToken={tokens.access_token}/>
+							<WeightChart
+								userid={tokens.userid}
+								accessToken={tokens.access_token}
+								onTokensUpdated={handleTokensUpdated}
+							/>
 						)}
 
 							<div className="space-y-3">

@@ -6,25 +6,26 @@ export async function GET(request: NextRequest) {
     const code = searchParams.get('code');
     const error = searchParams.get('error');
 
+    const clientId = process.env.WITHINGS_CLIENT_ID;
+    const clientSecret = process.env.WITHINGS_CLIENT_SECRET;
+    const redirectUri = process.env.WITHINGS_REDIRECT_URI || `${request.nextUrl.origin}/api/auth/callback`;
+    const homeUrl = process.env.WITHINGS_REDIRECT_URI ? process.env.WITHINGS_REDIRECT_URI.replace('/api/auth/callback', '') : request.nextUrl.origin;
+
     if (error) {
         return NextResponse.redirect(
-            `${request.nextUrl.origin}?error=${encodeURIComponent(error)}`
+            `${homeUrl}?error=${encodeURIComponent(error)}`
         );
     }
 
     if (!code) {
         return NextResponse.redirect(
-            `${request.nextUrl.origin}?error=no_code`
+            `${homeUrl}?error=no_code`
         );
     }
 
-    const clientId = process.env.WITHINGS_CLIENT_ID;
-    const clientSecret = process.env.WITHINGS_CLIENT_SECRET;
-    const redirectUri = process.env.WITHINGS_REDIRECT_URI || `${request.nextUrl.origin}/api/auth/callback`;
-
     if (!clientId || !clientSecret) {
         return NextResponse.redirect(
-            `${request.nextUrl.origin}?error=config_error`
+            `${homeUrl}?error=config_error`
         );
     }
 
@@ -46,12 +47,12 @@ export async function GET(request: NextRequest) {
         });
 
         return NextResponse.redirect(
-            `${request.nextUrl.origin}?${params.toString()}`
+            `${homeUrl}?${params.toString()}`
         );
     } catch (error) {
         console.error('Error exchanging code for token:', error);
         return NextResponse.redirect(
-            `${request.nextUrl.origin}?error=token_exchange_failed`
+            `${homeUrl}?error=token_exchange_failed`
         );
     }
 }

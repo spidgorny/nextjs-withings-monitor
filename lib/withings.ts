@@ -9,6 +9,33 @@ export interface WithingsTokens {
     expires_in: number;
 }
 
+export interface WithingsError {
+    status: number;
+    body?: unknown;
+    error?: string;
+}
+
+/**
+ * Check if an error is a 401 invalid token error
+ */
+export function isInvalidTokenError(error: unknown): boolean {
+    if (axios.isAxiosError(error)) {
+        const data = error.response?.data as WithingsError | undefined;
+        if (data?.status === 401 ||
+            (data?.error && data.error.includes('invalid_token')) ||
+            (data?.error && data.error.includes('The access token provided is invalid'))) {
+            return true;
+        }
+    }
+    // Also check if it's thrown as a string error message
+    if (error instanceof Error) {
+        return error.message.includes('status":401') ||
+               error.message.includes('invalid_token') ||
+               error.message.includes('The access token provided is invalid');
+    }
+    return false;
+}
+
 /**
  * Generate the Withings OAuth authorization URL
  */

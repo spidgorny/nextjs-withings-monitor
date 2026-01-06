@@ -4,6 +4,7 @@ import { getAuthorizationUrl } from '@/lib/withings';
 export async function GET(request: NextRequest) {
     const clientId = process.env.WITHINGS_CLIENT_ID;
     const redirectUri = process.env.WITHINGS_REDIRECT_URI || `${request.nextUrl.origin}/api/auth/callback`;
+    console.log('redirectUrl:', redirectUri);
 
     if (!clientId) {
         return NextResponse.json(
