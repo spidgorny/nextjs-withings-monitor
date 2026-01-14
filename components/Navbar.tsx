@@ -8,6 +8,7 @@ interface UserToken {
   refresh_token?: string;
   userid?: string;
   expires_in?: string;
+  alias?: string;
 }
 
 interface NavbarProps {
@@ -70,7 +71,7 @@ export default function Navbar({ currentUserid, onUserChange, onAddUser }: Navba
                   d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
                 />
               </svg>
-              <span>User: {currentUserid || 'None'}</span>
+              <span>{users.find(u => u.userid === currentUserid)?.alias || `User ${currentUserid}` || 'None'}</span>
               <svg
                 className={`h-4 w-4 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`}
                 fill="none"
@@ -111,7 +112,10 @@ export default function Navbar({ currentUserid, onUserChange, onAddUser }: Navba
                         }`}
                       >
                         <div className="flex items-center justify-between">
-                          <span className="font-medium">User ID: {user.userid}</span>
+                          <div className="flex flex-col">
+                            <span className="font-medium">{user.alias || `User ${user.userid}`}</span>
+                            <span className="text-xs text-zinc-500 dark:text-zinc-400">ID: {user.userid}</span>
+                          </div>
                           {user.userid === currentUserid && (
                             <svg
                               className="h-4 w-4"

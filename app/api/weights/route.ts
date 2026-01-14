@@ -54,14 +54,23 @@ export async function GET(request: NextRequest) {
     // Sort by timestamp ascending
     weights.sort((a, b) => a.timestamp - b.timestamp);
 
-    // Get last modified timestamp for the current month
+    // Filter to only last 365 days to reduce data transfer
     const now = new Date();
+    const oneYearAgo = new Date(now);
+    oneYearAgo.setDate(now.getDate() - 365);
+
+    const filteredWeights = weights.filter((w) => {
+      const weightDate = new Date(w.date);
+      return weightDate >= oneYearAgo;
+    });
+
+    // Get last modified timestamp for the current month
     const currentYear = now.getFullYear();
     const currentMonth = now.getMonth() + 1;
     const lastModified = await dao.getLastModified(userid, currentYear, currentMonth);
 
     return NextResponse.json({
-      weights,
+      weights: filteredWeights,
       lastModified: lastModified ? lastModified.toISOString() : null
     });
   } catch (error) {

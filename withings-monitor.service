@@ -1,0 +1,15 @@
+[Unit]
+Description=Next.js Withings Monitor
+After=network.target
+
+[Service]
+Type=simple
+User=slawa
+WorkingDirectory=/home/slawa/dev/nextjs-withings-monitor
+Environment=NODE_ENV=production
+ExecStart=/usr/local/bin/npm run start
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

@@ -17,12 +17,14 @@ function HomeContent() {
     refresh_token?: string;
     userid?: string;
     expires_in?: string;
+    alias?: string;
   }>>([]);
   const [tokens, setTokens] = useState<{
     access_token?: string;
     refresh_token?: string;
     userid?: string;
     expires_in?: string;
+    alias?: string;
   } | null>(null);
   const [measurements, setMeasurements] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -62,14 +64,30 @@ function HomeContent() {
 
     // Check if we got tokens from the callback
     if (searchParams.get('success') === 'true') {
-      const tokenData = {
-        access_token: searchParams.get('access_token') || undefined,
-        refresh_token: searchParams.get('refresh_token') || undefined,
-        userid: searchParams.get('userid') || undefined,
-        expires_in: searchParams.get('expires_in') || undefined,
-      };
+      const userid = searchParams.get('userid') || undefined;
 
-      if (tokenData.userid) {
+      if (userid) {
+        // Check if user already exists
+        const existingUser = users.find(u => u.userid === userid);
+
+        let alias = existingUser?.alias;
+
+        // Prompt for alias only if it's a new user (not already in the list)
+        if (!existingUser) {
+          alias = prompt('Enter an alias for this user (e.g., "John", "Mom", etc.):');
+          if (!alias) {
+            alias = `User ${userid}`;
+          }
+        }
+
+        const tokenData = {
+          access_token: searchParams.get('access_token') || undefined,
+          refresh_token: searchParams.get('refresh_token') || undefined,
+          userid: userid,
+          expires_in: searchParams.get('expires_in') || undefined,
+          alias: alias,
+        };
+
         // Add or update user in the list
         const existingIndex = users.findIndex(u => u.userid === tokenData.userid);
         let updatedUsers;
@@ -171,13 +189,19 @@ function HomeContent() {
     expires_in: string;
   }) => {
     // Update the tokens in state
-    setTokens(newTokens);
+    const existingUser = allUsers.find(u => u.userid === newTokens.userid);
+    const updatedTokens = {
+      ...newTokens,
+      alias: existingUser?.alias, // Preserve the alias
+    };
+
+    setTokens(updatedTokens);
 
     // Update the tokens in localStorage
     const existingIndex = allUsers.findIndex(u => u.userid === newTokens.userid);
     if (existingIndex >= 0) {
       const updatedUsers = [...allUsers];
-      updatedUsers[existingIndex] = newTokens;
+      updatedUsers[existingIndex] = updatedTokens;
       saveUsers(updatedUsers);
     }
   };
