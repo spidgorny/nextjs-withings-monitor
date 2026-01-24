@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import useSWR from 'swr';
 import {
 	Bar,
@@ -24,15 +23,14 @@ interface WeightData {
 
 interface WeightChartProps {
 	userid: string;
+	isFetching?: boolean;
+	fetchError?: string | null;
 }
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
-export default function WeightChart({ userid }: WeightChartProps) {
-	const [isFetching, setIsFetching] = useState(false);
-	const [fetchError, setFetchError] = useState<string | null>(null);
-
-	const { data, error, isLoading, mutate } = useSWR<{ weights: WeightData[]; lastModified: string | null }>(
+export default function WeightChart({ userid, isFetching = false, fetchError = null }: WeightChartProps) {
+	const { data, error, isLoading } = useSWR<{ weights: WeightData[]; lastModified: string | null }>(
 		`/api/weights?userid=${userid}`,
 		fetcher,
 		{
@@ -40,35 +38,6 @@ export default function WeightChart({ userid }: WeightChartProps) {
 			revalidateOnFocus: false,
 		}
 	);
-
-	const handleFetchCurrentMonth = async () => {
-		setIsFetching(true);
-		setFetchError(null);
-
-		try {
-			const response = await fetch('/api/fetch-month', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify({
-					userid,
-				}),
-			});
-
-			if (!response.ok) {
-				const errorData = await response.json();
-				throw new Error(errorData.error || 'Failed to fetch data');
-			}
-
-			// Revalidate SWR cache to get the updated data
-			await mutate();
-		} catch (err) {
-			setFetchError(err instanceof Error ? err.message : 'Unknown error');
-		} finally {
-			setIsFetching(false);
-		}
-	};
 
 	if (isLoading) {
 		return (
@@ -101,25 +70,14 @@ export default function WeightChart({ userid }: WeightChartProps) {
 	if (weights.length === 0) {
 		return (
 			<div className="rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
-				<div className="mb-4 flex items-center justify-between">
-					<h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">Weight History</h2>
-				</div>
+				<h2 className="mb-4 text-xl font-semibold text-zinc-900 dark:text-zinc-50">Weight History</h2>
 				<div className="space-y-4">
 					<p className="text-zinc-500 dark:text-zinc-400">
-						No weight data available. Click the button below to fetch the current month&apos;s data or run{' '}
+						No weight data available. Use the &quot;Fetch Current Month&quot; button in the navigation bar to fetch
+						data, or run{' '}
 						<code className="rounded bg-zinc-100 px-1 py-0.5 text-sm dark:bg-zinc-800">npm run fetch-year</code> to
 						download historical data.
 					</p>
-					<button
-						onClick={handleFetchCurrentMonth}
-						disabled={isFetching}
-						className="flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-600"
-					>
-						{isFetching && (
-							<div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
-						)}
-						{isFetching ? 'Fetching...' : 'Fetch Current Month'}
-					</button>
 					{fetchError && <p className="text-sm text-red-600 dark:text-red-400">Error: {fetchError}</p>}
 				</div>
 			</div>
@@ -170,25 +128,13 @@ export default function WeightChart({ userid }: WeightChartProps) {
 
 	return (
 		<div className="rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
-			<div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+			<div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
 				<h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">Weight History</h2>
-				<div className="flex flex-col gap-2 sm:items-end">
-					<button
-						onClick={handleFetchCurrentMonth}
-						disabled={isFetching}
-						className="flex items-center justify-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-600"
-					>
-						{isFetching && (
-							<div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
-						)}
-						{isFetching ? 'Fetching...' : 'Fetch Current Month'}
-					</button>
-					{lastModified && (
-						<p className="text-xs text-zinc-500 dark:text-zinc-400">
-							Last updated: {new Date(lastModified).toLocaleString()}
-						</p>
-					)}
-				</div>
+				{lastModified && (
+					<p className="text-xs text-zinc-500 dark:text-zinc-400">
+						Last updated: {new Date(lastModified).toLocaleString()}
+					</p>
+				)}
 			</div>
 
 			{fetchError && (

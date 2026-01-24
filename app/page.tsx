@@ -71,9 +71,9 @@ function HomeContent() {
 	};
 
 	return (
-		<div className="min-h-screen bg-zinc-50 p-8 font-sans dark:bg-black">
-			<main className="mx-auto max-w-4xl">
-				<div className="rounded-lg bg-white p-8 shadow-sm dark:bg-zinc-900">
+		<div className="min-h-screen bg-zinc-50 p-4 font-sans dark:bg-black">
+			<main className="mx-auto max-w-7xl">
+				<div className="rounded-lg bg-white p-6 shadow-sm dark:bg-zinc-900">
 					<h1 className="mb-6 text-3xl font-bold text-zinc-900 dark:text-zinc-50">Withings Health Monitor</h1>
 
 					{error && (
