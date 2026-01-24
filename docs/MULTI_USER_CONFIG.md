@@ -84,13 +84,13 @@ npx tsx scripts/fetch-year.ts [username] [year]
 
 ### Examples
 
-| Command | Username | Year | Description |
-|---------|----------|------|-------------|
-| `npx tsx scripts/fetch-year.ts` | `undefined` | `2025` | Legacy mode, current year |
-| `npx tsx scripts/fetch-year.ts 2024` | `undefined` | `2024` | Legacy mode, specific year |
-| `npx tsx scripts/fetch-year.ts slawa` | `slawa` | `2025` | Multi-user, current year |
-| `npx tsx scripts/fetch-year.ts slawa 2024` | `slawa` | `2024` | Multi-user, specific year |
-| `npx tsx scripts/fetch-year.ts marina 2023` | `marina` | `2023` | Multi-user, specific year |
+| Command                                     | Username    | Year   | Description                |
+|---------------------------------------------|-------------|--------|----------------------------|
+| `npx tsx scripts/fetch-year.ts`             | `undefined` | `2025` | Legacy mode, current year  |
+| `npx tsx scripts/fetch-year.ts 2024`        | `undefined` | `2024` | Legacy mode, specific year |
+| `npx tsx scripts/fetch-year.ts slawa`       | `slawa`     | `2025` | Multi-user, current year   |
+| `npx tsx scripts/fetch-year.ts slawa 2024`  | `slawa`     | `2024` | Multi-user, specific year  |
+| `npx tsx scripts/fetch-year.ts marina 2023` | `marina`    | `2023` | Multi-user, specific year  |
 
 ## Error Handling
 
@@ -143,6 +143,7 @@ data/
 To migrate from legacy format to multi-user format:
 
 **Old `.env.json`:**
+
 ```json
 {
   "access_token": "abc123",
@@ -152,6 +153,7 @@ To migrate from legacy format to multi-user format:
 ```
 
 **New `.env.json`:**
+
 ```json
 {
   "username1": {
@@ -164,11 +166,13 @@ To migrate from legacy format to multi-user format:
 ```
 
 Then update your commands from:
+
 ```bash
 npm run fetch-year 2024
 ```
 
 To:
+
 ```bash
 npm run fetch-year username1 2024
 ```

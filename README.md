@@ -17,14 +17,14 @@ A Next.js application to connect to Withings health devices and monitor your hea
    ```
 
 2. **Configure Withings credentials:**
-   - Create a Withings Developer account at [https://developer.withings.com](https://developer.withings.com)
-   - Create a new application
-   - Add your credentials to `.env`:
-     ```
-     WITHINGS_CLIENT_ID=your_client_id
-     WITHINGS_CLIENT_SECRET=your_client_secret
-     WITHINGS_REDIRECT_URI=http://localhost:3000/api/auth/callback
-     ```
+    - Create a Withings Developer account at [https://developer.withings.com](https://developer.withings.com)
+    - Create a new application
+    - Add your credentials to `.env`:
+      ```
+      WITHINGS_CLIENT_ID=your_client_id
+      WITHINGS_CLIENT_SECRET=your_client_secret
+      WITHINGS_REDIRECT_URI=http://localhost:3000/api/auth/callback
+      ```
 
 3. **Run the development server:**
    ```bash
@@ -46,7 +46,7 @@ A Next.js application to connect to Withings health devices and monitor your hea
 To fetch and store a full year of data locally:
 
 1. **Update `.env.json` with your tokens:**
-   
+
    **Multi-user format (recommended):**
    ```json
    {
@@ -64,7 +64,7 @@ To fetch and store a full year of data locally:
      }
    }
    ```
-   
+
    **Legacy single-user format:**
    ```json
    {
@@ -75,33 +75,58 @@ To fetch and store a full year of data locally:
    ```
 
 2. **Run the fetch script:**
-   
+
    **Multi-user format:**
    ```bash
    npm run fetch-year slawa 2024
    npm run fetch-year marina 2025
    ```
-   
+
    Or without specifying year (uses current year):
    ```bash
    npm run fetch-year slawa
    ```
-   
+
    **Legacy format:**
    ```bash
    npm run fetch-year 2024
    ```
 
-
 This will:
+
 - Fetch data month by month for the specified year
 - Store each month in `data/{userid}/{YYYY-MM}.json`
 - Skip months that already exist locally
 - Display a summary of the operation
 
+### Automated Data Fetching (Cronjob)
+
+To automatically fetch the current month's data for all users:
+
+```bash
+npm run fetch-all
+```
+
+This will:
+
+- Fetch current month data for all users in `.env.json`
+- Automatically refresh expired tokens
+- Update tokens in `.env.json` if refreshed
+- Continue with other users if one fails
+
+To set up automated fetching with a cronjob, see [docs/CRONJOB_SETUP.md](docs/CRONJOB_SETUP.md) for detailed
+instructions.
+
+**Example cronjob (runs daily at 3 AM):**
+
+```bash
+0 3 * * * cd /path/to/nextjs-withings-monitor && npm run fetch-all >> /tmp/withings-fetch.log 2>&1
+```
+
 ### Data Structure
 
 Data is stored in the following structure:
+
 ```
 data/
   └── {userid}/
@@ -111,6 +136,7 @@ data/
 ```
 
 Each file contains:
+
 ```json
 {
   "userid": "1372655",
@@ -119,7 +145,9 @@ Each file contains:
   "fetchedAt": "2026-01-02T22:26:18.446Z",
   "measurements": {
     "updatetime": 1766048364,
-    "measuregrps": [...]
+    "measuregrps": [
+      ...
+    ]
   }
 }
 ```
@@ -133,16 +161,20 @@ Each file contains:
 ## Libraries
 
 ### `lib/withings.ts`
+
 Core Withings API functions
 
 ### `lib/withings-dao.ts`
+
 Data Access Object for local storage
 
 ## Scripts
 
 - `npm run dev` - Start development server
 - `npm run build` - Build for production
-- `npm run fetch-year [YEAR]` - Fetch historical data
+- `npm run fetch-year [username] [year]` - Fetch historical data for a specific user and year
+- `npm run fetch-all` - Fetch current month data for all users (designed for cronjobs)
+- `npm run validate-env` - Validate environment configuration
 
 ## Notes
 
@@ -152,4 +184,5 @@ Data Access Object for local storage
 
 ---
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+This is a [Next.js](https://nextjs.org) project bootstrapped with [
+`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).

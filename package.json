@@ -1,34 +1,43 @@
 {
-  "name": "app",
-  "version": "0.1.0",
-  "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint",
-    "fetch-year": "tsx scripts/fetch-year.ts",
-    "validate-env": "tsx scripts/validate-env.ts"
-  },
-  "dependencies": {
-    "axios": "^1.13.2",
-    "dotenv": "^17.2.3",
-    "next": "16.1.1",
-    "prettier": "^3.7.4",
-    "react": "19.2.3",
-    "react-dom": "19.2.3",
-    "recharts": "^3.6.0",
-    "swr": "^2.3.8"
-  },
-  "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.1.1",
-    "tailwindcss": "^4",
-    "tsx": "^4.21.0",
-    "typescript": "^5"
-  }
+	"name": "app",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "next dev",
+		"build": "next build",
+		"start": "next start",
+		"lint": "eslint",
+		"fetch-year": "tsx scripts/fetch-year.ts",
+		"fetch-all": "tsx scripts/fetch-all-users.ts",
+		"validate-env": "tsx scripts/validate-env.ts"
+	},
+	"dependencies": {
+		"axios": "^1.13.2",
+		"dotenv": "^17.2.3",
+		"next": "16.1.1",
+		"react": "19.2.3",
+		"react-dom": "19.2.3",
+		"recharts": "^3.6.0",
+		"swr": "^2.3.8"
+	},
+	"devDependencies": {
+		"@tailwindcss/postcss": "^4",
+		"@types/node": "^20",
+		"@types/react": "^19",
+		"@types/react-dom": "^19",
+		"eslint": "^9",
+		"eslint-config-next": "16.1.1",
+		"prettier": "^3.8.1",
+		"tailwindcss": "^4",
+		"tsx": "^4.21.0",
+		"typescript": "^5"
+	},
+	"prettier": {
+		"trailingComma": "es5",
+		"singleQuote": true,
+		"useTabs": true,
+		"printWidth": 120,
+		"tabWidth": 2
+	}
 }

@@ -5,6 +5,7 @@
 ### 1. Updated `scripts/fetch-year.ts`
 
 **New Features:**
+
 - ✅ Supports multi-user `.env.json` format
 - ✅ Backwards compatible with legacy single-user format
 - ✅ Username as first command-line argument
@@ -14,16 +15,19 @@
 **Function Changes:**
 
 #### `loadConfig(username?: string)`
+
 - Now accepts optional `username` parameter
 - Detects multi-user format and extracts user config
 - Falls back to legacy format if username not provided
 - Provides helpful error messages listing available users
 
 #### `fetchYear(username: string | undefined, year: number)`
+
 - Updated to accept `username` parameter
 - Passes username to `loadConfig()`
 
 #### Command-Line Argument Parsing
+
 ```typescript
 // Smart parsing that handles:
 npx tsx scripts/fetch-year.ts                    // → username=undefined, year=2025
@@ -37,12 +41,14 @@ npx tsx scripts/fetch-year.ts slawa 2024         // → username="slawa", year=2
 **Purpose:** Validate and display information about `.env.json` configuration
 
 **Features:**
+
 - Detects format (multi-user vs legacy)
 - Lists all available users
 - Shows user IDs and token status
 - Provides usage examples
 
 **Usage:**
+
 ```bash
 npm run validate-env
 ```
@@ -50,11 +56,13 @@ npm run validate-env
 ### 3. Updated Documentation
 
 #### `README.md`
+
 - Added multi-user format examples
 - Updated fetch-year usage instructions
 - Documented both formats side-by-side
 
 #### `docs/MULTI_USER_CONFIG.md` (New)
+
 - Comprehensive guide to multi-user support
 - Usage examples with different argument combinations
 - Error handling documentation
@@ -63,6 +71,7 @@ npm run validate-env
 ### 4. Updated `package.json`
 
 Added new script:
+
 ```json
 {
   "scripts": {
@@ -134,11 +143,13 @@ npm run fetch-year
 ## Error Handling
 
 ### User Not Found
+
 ```
 ✗ Error: User "unknown" not found in .env.json. Available users: slawa, marina
 ```
 
 ### Multi-User Without Username
+
 ```
 ✗ Error: Multi-user .env.json detected. Please provide a username.
 Available users: slawa, marina
@@ -146,6 +157,7 @@ Usage: npx tsx scripts/fetch-year.ts <username> [year]
 ```
 
 ### Invalid Year
+
 ```
 Invalid year. Usage: npx tsx scripts/fetch-year.ts [username] [year]
 Examples:
@@ -173,6 +185,7 @@ data/
 ## Testing
 
 All scripts have been updated and tested for:
+
 - ✅ TypeScript compilation (no errors)
 - ✅ Multi-user config parsing
 - ✅ Legacy config backward compatibility
@@ -198,6 +211,7 @@ All scripts have been updated and tested for:
 ## Next Steps
 
 Users can now:
+
 1. Update their `.env.json` to multi-user format
 2. Run `npm run validate-env` to verify configuration
 3. Fetch data for any user: `npm run fetch-year <username> <year>`

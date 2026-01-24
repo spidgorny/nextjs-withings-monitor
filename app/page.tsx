@@ -1,138 +1,142 @@
 'use client';
 
-import { useEffect, useState, Suspense } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import useSWR from 'swr';
 import WeightChart from '@/components/WeightChart';
 import Navbar from '@/components/Navbar';
 
 // Force dynamic rendering to avoid SSR issues with localStorage
 export const dynamic = 'force-dynamic';
 
+interface User {
+	userid: string;
+	username: string;
+}
+
+interface UserWithAlias extends User {
+	alias?: string;
+}
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
 function HomeContent() {
-  const searchParams = useSearchParams();
-  const [currentUserid, setCurrentUserid] = useState<string | null>(null);
-  // ...existing code...
-  const [allUsers, setAllUsers] = useState<Array<{
-    access_token?: string;
-    refresh_token?: string;
-    userid?: string;
-    expires_in?: string;
-    alias?: string;
-  }>>([]);
-  const [tokens, setTokens] = useState<{
-    access_token?: string;
-    refresh_token?: string;
-    userid?: string;
-    expires_in?: string;
-    alias?: string;
-  } | null>(null);
-  const [measurements, setMeasurements] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+	const searchParams = useSearchParams();
+	const [currentUserid, setCurrentUserid] = useState<string | null>(null);
+	const [currentUser, setCurrentUser] = useState<UserWithAlias | null>(null);
+	const [measurements, setMeasurements] = useState<any>(null);
+	const [loading, setLoading] = useState(false);
+	const [error, setError] = useState<string | null>(null);
 
-  // Load users from localStorage
-  const loadUsers = () => {
-    const stored = localStorage.getItem('withings_users');
-    if (stored) {
-      const users = JSON.parse(stored);
-      setAllUsers(Array.isArray(users) ? users : []);
-      return Array.isArray(users) ? users : [];
-    }
-    return [];
-  };
+	// Fetch users from API using SWR
+	const {
+		data: usersData,
+		error: usersError,
+		mutate: mutateUsers,
+	} = useSWR<{ users: User[] }>('/api/users', fetcher, {
+		revalidateOnFocus: true,
+		revalidateOnReconnect: true,
+	});
 
-  // Save users to localStorage
-  const saveUsers = (users: typeof allUsers) => {
-    localStorage.setItem('withings_users', JSON.stringify(users));
-    setAllUsers(users);
-  };
+	// Get user aliases from localStorage
+	const getUserAliases = (): Record<string, string> => {
+		const stored = localStorage.getItem('withings_user_aliases');
+		return stored ? JSON.parse(stored) : {};
+	};
 
-  // Switch to a specific user
-  const switchToUser = (userid: string) => {
-    const user = allUsers.find(u => u.userid === userid);
-    if (user) {
-      setCurrentUserid(userid);
-      setTokens(user);
-      localStorage.setItem('withings_current_userid', userid);
-      setMeasurements(null); // Clear measurements when switching
-    }
-  };
+	// Save user alias to localStorage
+	const saveUserAlias = (userid: string, alias: string) => {
+		const aliases = getUserAliases();
+		aliases[userid] = alias;
+		localStorage.setItem('withings_user_aliases', JSON.stringify(aliases));
+	};
 
-  useEffect(() => {
-    // Load all users
-    const users = loadUsers();
+	// Get users with aliases
+	const getUsersWithAliases = (): UserWithAlias[] => {
+		if (!usersData?.users) return [];
+		const aliases = getUserAliases();
+		return usersData.users.map((user) => ({
+			...user,
+			alias: aliases[user.userid] || user.username,
+		}));
+	};
 
-    // Check if we got tokens from the callback
-    if (searchParams.get('success') === 'true') {
-      const userid = searchParams.get('userid') || undefined;
+	// Switch to a specific user
+	const switchToUser = (userid: string) => {
+		const users = getUsersWithAliases();
+		const user = users.find((u) => u.userid === userid);
+		if (user) {
+			setCurrentUserid(userid);
+			setCurrentUser(user);
+			localStorage.setItem('withings_current_userid', userid);
+			setMeasurements(null); // Clear measurements when switching
+		}
+	};
 
-      if (userid) {
-        // Check if user already exists
-        const existingUser = users.find(u => u.userid === userid);
+	useEffect(() => {
+		// Wait for users data to load
+		if (!usersData?.users) return;
 
-        let alias = existingUser?.alias;
+		const users = getUsersWithAliases();
 
-        // Prompt for alias only if it's a new user (not already in the list)
-        if (!existingUser) {
-          alias = prompt('Enter an alias for this user (e.g., "John", "Mom", etc.):');
-          if (!alias) {
-            alias = `User ${userid}`;
-          }
-        }
+		// Check if we got tokens from the callback
+		if (searchParams.get('success') === 'true') {
+			const userid = searchParams.get('userid') || undefined;
+			const username = searchParams.get('username') || undefined;
 
-        const tokenData = {
-          access_token: searchParams.get('access_token') || undefined,
-          refresh_token: searchParams.get('refresh_token') || undefined,
-          userid: userid,
-          expires_in: searchParams.get('expires_in') || undefined,
-          alias: alias,
-        };
+			if (userid) {
+				// Refresh users list from server
+				mutateUsers();
 
-        // Add or update user in the list
-        const existingIndex = users.findIndex(u => u.userid === tokenData.userid);
-        let updatedUsers;
-        if (existingIndex >= 0) {
-          updatedUsers = [...users];
-          updatedUsers[existingIndex] = tokenData;
-        } else {
-          updatedUsers = [...users, tokenData];
-        }
+				// Check if user already has an alias
+				const aliases = getUserAliases();
+				let alias = aliases[userid];
 
-        localStorage.setItem('withings_users', JSON.stringify(updatedUsers));
-        setAllUsers(updatedUsers);
-        setCurrentUserid(tokenData.userid);
-        setTokens(tokenData);
-        localStorage.setItem('withings_current_userid', tokenData.userid);
-      }
-    } else if (searchParams.get('error')) {
-      setError(searchParams.get('error') || 'Unknown error');
-    } else {
-      // Try to load the last active user
-      const lastUserid = localStorage.getItem('withings_current_userid');
-      if (lastUserid && users.length > 0) {
-        const user = users.find(u => u.userid === lastUserid);
-        if (user) {
-          setCurrentUserid(lastUserid);
-          setTokens(user);
-        } else if (users.length > 0) {
-          // Fallback to first user if last user not found
-          setCurrentUserid(users[0].userid!);
-          setTokens(users[0]);
-        }
-      } else if (users.length > 0) {
-        // No last user, use first available
-        setCurrentUserid(users[0].userid!);
-        setTokens(users[0]);
-      }
-    }
-  }, [searchParams]);
+				// Prompt for alias only if it's a new user (no alias set)
+				if (!alias && username) {
+					const promptResult = prompt(`Enter an alias for user "${username}" (e.g., "John", "Mom", etc.):`);
+					alias = promptResult || username;
+					saveUserAlias(userid, alias);
+				}
+
+				// Set as current user
+				setCurrentUserid(userid);
+				const user = users.find((u) => u.userid === userid);
+				if (user) {
+					setCurrentUser({ ...user, alias: alias || user.username });
+				}
+				localStorage.setItem('withings_current_userid', userid);
+			}
+		} else if (searchParams.get('error')) {
+			setError(searchParams.get('error') || 'Unknown error');
+		} else {
+			// Try to load the last active user
+			const lastUserid = localStorage.getItem('withings_current_userid');
+			if (lastUserid && users.length > 0) {
+				const user = users.find((u) => u.userid === lastUserid);
+				if (user) {
+					setCurrentUserid(lastUserid);
+					setCurrentUser(user);
+				} else if (users.length > 0) {
+					// Fallback to first user if last user not found
+					setCurrentUserid(users[0].userid);
+					setCurrentUser(users[0]);
+				}
+			} else if (users.length > 0) {
+				// No last user, use first available
+				setCurrentUserid(users[0].userid);
+				setCurrentUser(users[0]);
+			}
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [searchParams, usersData]);
 
 	const handleConnect = () => {
 		window.location.href = '/api/auth/withings';
 	};
 
 	const handleGetMeasurements = async () => {
-		if (!tokens?.access_token) return;
+		if (!currentUserid) return;
 
 		setLoading(true);
 		setError(null);
@@ -142,7 +146,7 @@ function HomeContent() {
 			const now = Math.floor(Date.now() / 1000);
 
 			const response = await fetch(
-				`/api/measurements?access_token=${tokens.access_token}&startdate=${thirtyDaysAgo}&enddate=${now}`
+				`/api/measurements?userid=${currentUserid}&startdate=${thirtyDaysAgo}&enddate=${now}`
 			);
 
 			if (!response.ok) {
@@ -158,73 +162,62 @@ function HomeContent() {
 		}
 	};
 
-  const handleDisconnect = () => {
-    if (!currentUserid) return;
+	const handleDisconnect = async () => {
+		if (!currentUserid) return;
 
-    // Remove current user from the list
-    const updatedUsers = allUsers.filter(u => u.userid !== currentUserid);
-    saveUsers(updatedUsers);
+		// Note: We don't actually remove the user from .env.json here
+		// Just remove their alias and clear current selection
+		const aliases = getUserAliases();
+		delete aliases[currentUserid];
+		localStorage.setItem('withings_user_aliases', JSON.stringify(aliases));
 
-    // Switch to another user if available, otherwise clear
-    if (updatedUsers.length > 0) {
-      switchToUser(updatedUsers[0].userid!);
-    } else {
-      setCurrentUserid(null);
-      setTokens(null);
-      setMeasurements(null);
-      localStorage.removeItem('withings_current_userid');
-    }
+		const users = getUsersWithAliases();
 
-    window.history.replaceState({}, '', '/');
-  };
+		// Switch to another user if available, otherwise clear
+		const otherUsers = users.filter((u) => u.userid !== currentUserid);
+		if (otherUsers.length > 0) {
+			switchToUser(otherUsers[0].userid);
+		} else {
+			setCurrentUserid(null);
+			setCurrentUser(null);
+			setMeasurements(null);
+			localStorage.removeItem('withings_current_userid');
+		}
 
-  const handleAddUser = () => {
-    window.location.href = '/api/auth/withings';
-  };
+		// Refresh users list
+		mutateUsers();
 
-  const handleTokensUpdated = (newTokens: {
-    access_token: string;
-    refresh_token: string;
-    userid: string;
-    expires_in: string;
-  }) => {
-    // Update the tokens in state
-    const existingUser = allUsers.find(u => u.userid === newTokens.userid);
-    const updatedTokens = {
-      ...newTokens,
-      alias: existingUser?.alias, // Preserve the alias
-    };
+		window.history.replaceState({}, '', '/');
+	};
 
-    setTokens(updatedTokens);
-
-    // Update the tokens in localStorage
-    const existingIndex = allUsers.findIndex(u => u.userid === newTokens.userid);
-    if (existingIndex >= 0) {
-      const updatedUsers = [...allUsers];
-      updatedUsers[existingIndex] = updatedTokens;
-      saveUsers(updatedUsers);
-    }
-  };
+	const handleAddUser = () => {
+		window.location.href = '/api/auth/withings';
+	};
 
 	return (
 		<div className="min-h-screen bg-zinc-50 p-8 font-sans dark:bg-black">
 			<main className="w-full">
 				<div className="rounded-lg bg-white p-8 shadow-sm dark:bg-zinc-900">
-					<Navbar
-						currentUserid={currentUserid || undefined}
-						onUserChange={switchToUser}
-						onAddUser={handleAddUser}
-					/>
+					<Navbar currentUserid={currentUserid || undefined} onUserChange={switchToUser} onAddUser={handleAddUser} />
 
 					{error && (
 						<div className="mb-4 rounded-md bg-red-50 p-4 dark:bg-red-900/20">
-							<p className="text-sm text-red-800 dark:text-red-400">
-								Error: {error}
-							</p>
+							<p className="text-sm text-red-800 dark:text-red-400">Error: {error}</p>
 						</div>
 					)}
 
-					{!tokens ? (
+					{usersError && (
+						<div className="mb-4 rounded-md bg-red-50 p-4 dark:bg-red-900/20">
+							<p className="text-sm text-red-800 dark:text-red-400">Error loading users: {usersError.message}</p>
+						</div>
+					)}
+
+					{!usersData ? (
+						<div className="flex items-center gap-2">
+							<div className="h-5 w-5 animate-spin rounded-full border-2 border-zinc-300 border-t-blue-600 dark:border-zinc-600 dark:border-t-blue-400"></div>
+							<p className="text-zinc-500 dark:text-zinc-400">Loading users...</p>
+						</div>
+					) : !currentUser ? (
 						<div className="space-y-4">
 							<p className="text-zinc-600 dark:text-zinc-400">
 								Connect your Withings account to view your health data.
@@ -238,15 +231,8 @@ function HomeContent() {
 						</div>
 					) : (
 						<div className="space-y-6">
-
-						{/* Weight Chart */}
-						{tokens.userid && (
-							<WeightChart
-								userid={tokens.userid}
-								accessToken={tokens.access_token}
-								onTokensUpdated={handleTokensUpdated}
-							/>
-						)}
+							{/* Weight Chart */}
+							{currentUser.userid && <WeightChart userid={currentUser.userid} />}
 
 							<div className="space-y-3">
 								<div className="flex gap-3">
@@ -267,19 +253,17 @@ function HomeContent() {
 
 								<details className="rounded-md border border-zinc-200 p-4 dark:border-zinc-800">
 									<summary className="cursor-pointer font-medium text-zinc-900 dark:text-zinc-50">
-										View Tokens
+										View User Info
 									</summary>
 									<pre className="mt-2 overflow-x-auto text-xs text-zinc-600 dark:text-zinc-400">
-                    {JSON.stringify(tokens, null, 2)}
+										{JSON.stringify(currentUser, null, 2)}
 									</pre>
 								</details>
 							</div>
 
 							{measurements && (
 								<div className="rounded-md border border-zinc-200 p-4 dark:border-zinc-800">
-									<h2 className="mb-3 font-semibold text-zinc-900 dark:text-zinc-50">
-										Measurements
-									</h2>
+									<h2 className="mb-3 font-semibold text-zinc-900 dark:text-zinc-50">Measurements</h2>
 									<pre className="overflow-x-auto text-xs text-zinc-600 dark:text-zinc-400">
 										{JSON.stringify(measurements, null, 2)}
 									</pre>
@@ -294,14 +278,15 @@ function HomeContent() {
 }
 
 export default function Home() {
-  return (
-    <Suspense fallback={
-      <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-        <div className="text-zinc-600 dark:text-zinc-400">Loading...</div>
-      </div>
-    }>
-      <HomeContent />
-    </Suspense>
-  );
+	return (
+		<Suspense
+			fallback={
+				<div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
+					<div className="text-zinc-600 dark:text-zinc-400">Loading...</div>
+				</div>
+			}
+		>
+			<HomeContent />
+		</Suspense>
+	);
 }
-

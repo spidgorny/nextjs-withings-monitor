@@ -3,181 +3,177 @@ import axios from 'axios';
 const API_ENDPOINT = 'https://wbsapi.withings.net';
 
 export interface WithingsTokens {
-    access_token: string;
-    refresh_token: string;
-    userid: string;
-    expires_in: number;
+	access_token: string;
+	refresh_token: string;
+	userid: string;
+	expires_in: number;
 }
 
 export interface WithingsError {
-    status: number;
-    body?: unknown;
-    error?: string;
+	status: number;
+	body?: unknown;
+	error?: string;
 }
 
 /**
  * Check if an error is a 401 invalid token error
  */
 export function isInvalidTokenError(error: unknown): boolean {
-    if (axios.isAxiosError(error)) {
-        const data = error.response?.data as WithingsError | undefined;
-        if (data?.status === 401 ||
-            (data?.error && data.error.includes('invalid_token')) ||
-            (data?.error && data.error.includes('The access token provided is invalid'))) {
-            return true;
-        }
-    }
-    // Also check if it's thrown as a string error message
-    if (error instanceof Error) {
-        return error.message.includes('status":401') ||
-               error.message.includes('invalid_token') ||
-               error.message.includes('The access token provided is invalid');
-    }
-    return false;
+	if (axios.isAxiosError(error)) {
+		const data = error.response?.data as WithingsError | undefined;
+		if (
+			data?.status === 401 ||
+			(data?.error && data.error.includes('invalid_token')) ||
+			(data?.error && data.error.includes('The access token provided is invalid'))
+		) {
+			return true;
+		}
+	}
+	// Also check if it's thrown as a string error message
+	if (error instanceof Error) {
+		return (
+			error.message.includes('status":401') ||
+			error.message.includes('invalid_token') ||
+			error.message.includes('The access token provided is invalid')
+		);
+	}
+	return false;
 }
 
 /**
  * Generate the Withings OAuth authorization URL
  */
-export function getAuthorizationUrl(
-    clientId: string,
-    redirectUri: string,
-    state?: string
-): string {
-    const scope = 'user.info,user.metrics,user.activity';
-    const params = new URLSearchParams({
-        response_type: 'code',
-        client_id: clientId,
-        redirect_uri: redirectUri,
-        scope: scope,
-        ...(state && { state }),
-    });
+export function getAuthorizationUrl(clientId: string, redirectUri: string, state?: string): string {
+	const scope = 'user.info,user.metrics,user.activity';
+	const params = new URLSearchParams({
+		response_type: 'code',
+		client_id: clientId,
+		redirect_uri: redirectUri,
+		scope: scope,
+		...(state && { state }),
+	});
 
-    return `https://account.withings.com/oauth2_user/authorize2?${params.toString()}`;
+	return `https://account.withings.com/oauth2_user/authorize2?${params.toString()}`;
 }
 
 /**
  * Exchange authorization code for access token
  */
 export async function getAccessToken(
-    clientId: string,
-    clientSecret: string,
-    authorizationCode: string,
-    redirectUri: string
+	clientId: string,
+	clientSecret: string,
+	authorizationCode: string,
+	redirectUri: string
 ): Promise<WithingsTokens> {
-    try {
-        const response = await axios.post(
-            `${API_ENDPOINT}/v2/oauth2`,
-            new URLSearchParams({
-                action: 'requesttoken',
-                grant_type: 'authorization_code',
-                client_id: clientId,
-                client_secret: clientSecret,
-                code: authorizationCode,
-                redirect_uri: redirectUri,
-            }),
-            {
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-            }
-        );
+	try {
+		const response = await axios.post(
+			`${API_ENDPOINT}/v2/oauth2`,
+			new URLSearchParams({
+				action: 'requesttoken',
+				grant_type: 'authorization_code',
+				client_id: clientId,
+				client_secret: clientSecret,
+				code: authorizationCode,
+				redirect_uri: redirectUri,
+			}),
+			{
+				headers: {
+					'Content-Type': 'application/x-www-form-urlencoded',
+				},
+			}
+		);
 
-        if (response.data.status !== 0) {
-            throw new Error(`Withings API Error: ${JSON.stringify(response.data)}`);
-        }
+		if (response.data.status !== 0) {
+			throw new Error(`Withings API Error: ${JSON.stringify(response.data)}`);
+		}
 
-        return response.data.body;
-    } catch (error) {
-        if (axios.isAxiosError(error)) {
-            throw new Error(`Failed to get access token: ${error.response?.data?.error || error.message}`);
-        }
-        throw error;
-    }
+		return response.data.body;
+	} catch (error) {
+		if (axios.isAxiosError(error)) {
+			throw new Error(`Failed to get access token: ${error.response?.data?.error || error.message}`);
+		}
+		throw error;
+	}
 }
 
 /**
  * Refresh an expired access token
  */
 export async function refreshAccessToken(
-    clientId: string,
-    clientSecret: string,
-    refreshToken: string
+	clientId: string,
+	clientSecret: string,
+	refreshToken: string
 ): Promise<WithingsTokens> {
-    try {
-        const response = await axios.post(
-            `${API_ENDPOINT}/v2/oauth2`,
-            new URLSearchParams({
-                action: 'requesttoken',
-                grant_type: 'refresh_token',
-                client_id: clientId,
-                client_secret: clientSecret,
-                refresh_token: refreshToken,
-            }),
-            {
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-            }
-        );
+	try {
+		const response = await axios.post(
+			`${API_ENDPOINT}/v2/oauth2`,
+			new URLSearchParams({
+				action: 'requesttoken',
+				grant_type: 'refresh_token',
+				client_id: clientId,
+				client_secret: clientSecret,
+				refresh_token: refreshToken,
+			}),
+			{
+				headers: {
+					'Content-Type': 'application/x-www-form-urlencoded',
+				},
+			}
+		);
 
-        if (response.data.status !== 0) {
-            throw new Error(`Withings API Error: ${JSON.stringify(response.data)}`);
-        }
+		if (response.data.status !== 0) {
+			throw new Error(`Withings API Error: ${JSON.stringify(response.data)}`);
+		}
 
-        return response.data.body;
-    } catch (error) {
-        if (axios.isAxiosError(error)) {
-            throw new Error(`Failed to refresh token: ${error.response?.data?.error || error.message}`);
-        }
-        throw error;
-    }
+		return response.data.body;
+	} catch (error) {
+		if (axios.isAxiosError(error)) {
+			throw new Error(`Failed to refresh token: ${error.response?.data?.error || error.message}`);
+		}
+		throw error;
+	}
 }
 
 /**
  * Get measurements from Withings API
  */
 export async function getMeasurements(
-    accessToken: string,
-    options?: {
-        startdate?: number;
-        enddate?: number;
-        meastypes?: string;
-    }
+	accessToken: string,
+	options?: {
+		startdate?: number;
+		enddate?: number;
+		meastypes?: string;
+	}
 ) {
-    try {
-        const params: Record<string, string> = {
-            action: 'getmeas',
-            meastypes: options?.meastypes || '1,4,5,6,8,11,12,54,71,73,76,77,88,91,123',
-        };
+	try {
+		const params: Record<string, string> = {
+			action: 'getmeas',
+			meastypes: options?.meastypes || '1,4,5,6,8,11,12,54,71,73,76,77,88,91,123',
+		};
 
-        if (options?.startdate) {
-            params.startdate = options.startdate.toString();
-        }
-        if (options?.enddate) {
-            params.enddate = options.enddate.toString();
-        }
+		if (options?.startdate) {
+			params.startdate = options.startdate.toString();
+		}
+		if (options?.enddate) {
+			params.enddate = options.enddate.toString();
+		}
 
-        const response = await axios.post(
-            `${API_ENDPOINT}/measure`,
-            new URLSearchParams(params),
-            {
-                headers: {
-                    'Authorization': `Bearer ${accessToken}`,
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-            }
-        );
+		const response = await axios.post(`${API_ENDPOINT}/measure`, new URLSearchParams(params), {
+			headers: {
+				Authorization: `Bearer ${accessToken}`,
+				'Content-Type': 'application/x-www-form-urlencoded',
+			},
+		});
 
-        if (response.data.status !== 0) {
-            throw new Error(`Withings API Error: ${JSON.stringify(response.data)}`);
-        }
+		if (response.data.status !== 0) {
+			throw new Error(`Withings API Error: ${JSON.stringify(response.data)}`);
+		}
 
-        return response.data.body;
-    } catch (error) {
-        if (axios.isAxiosError(error)) {
-            throw new Error(`Failed to get measurements: ${error.response?.data?.error || error.message}`);
-        }
-        throw error;
-    }
+		return response.data.body;
+	} catch (error) {
+		if (axios.isAxiosError(error)) {
+			throw new Error(`Failed to get measurements: ${error.response?.data?.error || error.message}`);
+		}
+		throw error;
+	}
 }
