@@ -79,7 +79,7 @@ async function fetchYear(username: string | undefined, year: number) {
 	console.log(`Year: ${year}\n`);
 
 	// Initialize DAO
-	const dao = new WithingsDAO('data');
+	const dao = new WithingsDAO();
 
 	// Fetch data for each month
 	const errors: Array<{ month: number; error: string }> = [];

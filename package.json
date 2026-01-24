@@ -10,6 +10,7 @@
 		"lint": "eslint",
 		"fetch-year": "tsx scripts/fetch-year.ts",
 		"fetch-all": "tsx scripts/fetch-all-users.ts",
+		"refresh-tokens": "tsx scripts/refresh-tokens.ts",
 		"validate-env": "tsx scripts/validate-env.ts"
 	},
 	"dependencies": {

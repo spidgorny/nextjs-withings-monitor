@@ -37,7 +37,7 @@ async function fetchAllUsers() {
 		console.log(`Found ${usernames.length} user(s): ${usernames.join(', ')}\n`);
 
 		// Initialize DAO
-		const dao = new WithingsDAO('data');
+		const dao = new WithingsDAO();
 
 		// Get current year and month
 		const now = new Date();

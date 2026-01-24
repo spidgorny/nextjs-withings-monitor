@@ -1,5 +1,6 @@
 import fs from 'fs/promises';
 import path from 'path';
+import findUp from 'find-up';
 import { getMeasurements, isInvalidTokenError, refreshAccessToken } from './withings';
 import { getTokensByUserId, updateUserTokensByUserId } from './env-config';
 
@@ -14,8 +15,18 @@ export interface MeasurementData {
 export class WithingsDAO {
 	private dataDir: string;
 
-	constructor(dataDir: string = 'data') {
-		this.dataDir = dataDir;
+	constructor(dataDir?: string) {
+		// If no dataDir provided, find the project root and use 'data' directory
+		if (!dataDir) {
+			const packageJsonPath = findUp.sync('package.json');
+			if (!packageJsonPath) {
+				throw new Error('Could not find package.json to determine project root');
+			}
+			const projectRoot = path.dirname(packageJsonPath);
+			this.dataDir = path.join(projectRoot, 'data');
+		} else {
+			this.dataDir = dataDir;
+		}
 	}
 
 	/**
