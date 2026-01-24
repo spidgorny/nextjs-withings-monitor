@@ -11,6 +11,7 @@
 		"fetch-year": "tsx scripts/fetch-year.ts",
 		"fetch-all": "tsx scripts/fetch-all-users.ts",
 		"refresh-tokens": "tsx scripts/refresh-tokens.ts",
+		"extract-weights": "tsx scripts/extract-weights.ts",
 		"validate-env": "tsx scripts/validate-env.ts"
 	},
 	"dependencies": {
