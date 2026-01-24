@@ -1,6 +1,5 @@
 'use client';
 
-import useSWR from 'swr';
 import WeightStatistics from './WeightStatistics';
 import MonthlyWeightChart from './MonthlyWeightChart';
 import DailyWeightChart from './DailyWeightChart';
@@ -12,23 +11,22 @@ interface WeightData {
 }
 
 interface WeightChartProps {
-	userid: string;
+	weights: WeightData[];
+	lastModified: string | null;
+	isLoading: boolean;
+	isError: any;
 	isFetching?: boolean;
 	fetchError?: string | null;
 }
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
-
-export default function WeightChart({ userid, isFetching = false, fetchError = null }: WeightChartProps) {
-	const { data, error, isLoading } = useSWR<{ weights: WeightData[]; lastModified: string | null }>(
-		`/api/weights?userid=${userid}`,
-		fetcher,
-		{
-			refreshInterval: 0, // Don't auto-refresh since data is static
-			revalidateOnFocus: false,
-		}
-	);
-
+export default function WeightChart({
+	weights,
+	lastModified,
+	isLoading,
+	isError,
+	isFetching = false,
+	fetchError = null,
+}: WeightChartProps) {
 	if (isLoading) {
 		return (
 			<div className="rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
@@ -43,19 +41,16 @@ export default function WeightChart({ userid, isFetching = false, fetchError = n
 		);
 	}
 
-	if (error) {
+	if (isError) {
 		return (
 			<div className="rounded-lg border border-red-200 bg-red-50 p-6 dark:border-red-900/50 dark:bg-red-900/20">
 				<h2 className="mb-4 text-xl font-semibold text-red-900 dark:text-red-400">Weight History</h2>
 				<p className="text-sm text-red-800 dark:text-red-400">
-					Error loading weight data: {error.message || 'Unknown error'}
+					Error loading weight data: {isError.message || 'Unknown error'}
 				</p>
 			</div>
 		);
 	}
-
-	const weights = data?.weights || [];
-	const lastModified = data?.lastModified;
 
 	if (weights.length === 0) {
 		return (

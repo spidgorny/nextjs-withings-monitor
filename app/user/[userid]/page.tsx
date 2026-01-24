@@ -6,6 +6,7 @@ import Link from 'next/link';
 import WeightChart from '@/components/WeightChart';
 import Navbar from '@/components/Navbar';
 import { useUsers } from '@/hooks/useUsers';
+import { useWithings } from '@/hooks/useWithings';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -15,12 +16,20 @@ function UserPageContent() {
 	const router = useRouter();
 	const userid = params.userid as string;
 
-	const [error, setError] = useState<string | null>(null);
 	const [isFetching, setIsFetching] = useState(false);
 	const [fetchError, setFetchError] = useState<string | null>(null);
 
 	// Use custom hook for users
 	const { findUser, getUserAlias, isLoading: usersLoading, isError: usersError } = useUsers();
+
+	// Use custom hook for Withings data
+	const {
+		weights,
+		lastModified,
+		isLoading: weightsLoading,
+		isError: weightsError,
+		fetchCurrentMonth,
+	} = useWithings(userid);
 
 	// Find current user
 	const currentUser = findUser(userid);
@@ -39,22 +48,7 @@ function UserPageContent() {
 		setFetchError(null);
 
 		try {
-			const response = await fetch('/api/fetch-month', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify({
-					userid,
-				}),
-			});
-
-			if (!response.ok) {
-				const errorData = await response.json();
-				throw new Error(errorData.error || 'Failed to fetch data');
-			}
-
-			// Success - the SWR cache in WeightChart will auto-revalidate
+			await fetchCurrentMonth();
 		} catch (err) {
 			setFetchError(err instanceof Error ? err.message : 'Unknown error');
 		} finally {
@@ -124,15 +118,16 @@ function UserPageContent() {
 						isFetching={isFetching}
 					/>
 
-					{error && (
-						<div className="mb-4 rounded-md bg-red-50 p-4 dark:bg-red-900/20">
-							<p className="text-sm text-red-800 dark:text-red-400">Error: {error}</p>
-						</div>
-					)}
-
 					<div className="space-y-6">
 						{/* Weight Chart */}
-						<WeightChart userid={userid} isFetching={isFetching} fetchError={fetchError} />
+						<WeightChart
+							weights={weights}
+							lastModified={lastModified}
+							isLoading={weightsLoading}
+							isError={weightsError}
+							isFetching={isFetching}
+							fetchError={fetchError}
+						/>
 
 						<details className="rounded-md border border-zinc-200 p-4 dark:border-zinc-800">
 							<summary className="cursor-pointer font-medium text-zinc-900 dark:text-zinc-50">View User Info</summary>
