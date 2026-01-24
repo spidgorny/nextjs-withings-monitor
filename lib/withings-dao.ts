@@ -67,6 +67,7 @@ export class WithingsDAO {
 					access_token: newTokens.access_token,
 					refresh_token: newTokens.refresh_token,
 					expires_in: newTokens.expires_in.toString(),
+					issued_at: new Date().toISOString(),
 				});
 
 				console.log('  ✓ Token refreshed successfully');

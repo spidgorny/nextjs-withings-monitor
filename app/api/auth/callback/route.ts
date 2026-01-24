@@ -36,6 +36,7 @@ export async function GET(request: NextRequest) {
 			refresh_token: tokens.refresh_token,
 			userid: tokens.userid,
 			expires_in: tokens.expires_in.toString(),
+			issued_at: new Date().toISOString(),
 		});
 
 		console.log(`✓ Tokens saved for user "${username}" (userid: ${tokens.userid})`);

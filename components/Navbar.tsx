@@ -2,16 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import useSWR from 'swr';
-
-interface User {
-	userid: string;
-	username: string;
-}
-
-interface UserWithAlias extends User {
-	alias?: string;
-}
+import { useUsers } from '@/hooks/useUsers';
 
 interface NavbarProps {
 	currentUserid?: string;
@@ -19,35 +10,13 @@ interface NavbarProps {
 	onAddUser: () => void;
 }
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
-
 export default function Navbar({ currentUserid, onUserChange, onAddUser }: NavbarProps) {
 	const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-	// Fetch users from API using SWR
-	const { data: usersData } = useSWR<{ users: User[] }>('/api/users', fetcher, {
-		revalidateOnFocus: true,
-	});
+	// Use custom hook for users
+	const { usersWithAliases } = useUsers();
 
-	// Get user aliases from localStorage
-	const getUserAliases = (): Record<string, string> => {
-		if (typeof window === 'undefined') return {};
-		const stored = localStorage.getItem('withings_user_aliases');
-		return stored ? JSON.parse(stored) : {};
-	};
-
-	// Get users with aliases
-	const getUsersWithAliases = (): UserWithAlias[] => {
-		if (!usersData?.users) return [];
-		const aliases = getUserAliases();
-		return usersData.users.map((user) => ({
-			...user,
-			alias: aliases[user.userid] || user.username,
-		}));
-	};
-
-	const users = getUsersWithAliases();
-	const currentUser = users.find((u) => u.userid === currentUserid);
+	const currentUser = usersWithAliases.find((u) => u.userid === currentUserid);
 
 	const handleUserSwitch = (userid: string) => {
 		onUserChange(userid);
@@ -60,7 +29,7 @@ export default function Navbar({ currentUserid, onUserChange, onAddUser }: Navba
 				<Link href="/">Withings Health Monitor</Link>
 			</h1>
 
-			{users.length > 0 && (
+			{usersWithAliases.length > 0 && (
 				<div className="flex items-center gap-3">
 					{/* User Switcher Dropdown */}
 					<div className="relative">
@@ -98,10 +67,10 @@ export default function Navbar({ currentUserid, onUserChange, onAddUser }: Navba
 										<div className="mb-2 px-3 py-2 text-xs font-semibold uppercase text-zinc-500 dark:text-zinc-400">
 											Switch User
 										</div>
-										{users.map((user) => (
+										{usersWithAliases.map((user) => (
 											<button
 												key={user.userid}
-												onClick={() => handleUserSwitch(user.userid!)}
+												onClick={() => handleUserSwitch(user.userid)}
 												className={`w-full rounded px-3 py-2 text-left text-sm transition-colors ${
 													user.userid === currentUserid
 														? 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400'
@@ -110,8 +79,8 @@ export default function Navbar({ currentUserid, onUserChange, onAddUser }: Navba
 											>
 												<div className="flex items-center justify-between">
 													<div className="flex flex-col">
-														<span className="font-medium">{user.alias || `User ${user.userid}`}</span>
-														<span className="text-xs text-zinc-500 dark:text-zinc-400">ID: {user.userid}</span>
+														<span className="font-medium">{user.alias}</span>
+														<span className="text-xs text-zinc-500 dark:text-zinc-400">@{user.username}</span>
 													</div>
 													{user.userid === currentUserid && (
 														<svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">

@@ -7,6 +7,7 @@ export interface UserTokens {
 	refresh_token: string;
 	userid: string;
 	expires_in: string;
+	issued_at?: string; // ISO timestamp when the token was issued/refreshed
 }
 
 export interface EnvConfig {

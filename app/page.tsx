@@ -1,204 +1,80 @@
 'use client';
 
 import { Suspense, useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
-import useSWR from 'swr';
-import WeightChart from '@/components/WeightChart';
-import Navbar from '@/components/Navbar';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { useUsers } from '@/hooks/useUsers';
 
 // Force dynamic rendering to avoid SSR issues with localStorage
 export const dynamic = 'force-dynamic';
 
-interface User {
-	userid: string;
-	username: string;
-}
-
-interface UserWithAlias extends User {
-	alias?: string;
-}
-
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
-
 function HomeContent() {
 	const searchParams = useSearchParams();
-	const [currentUserid, setCurrentUserid] = useState<string | null>(null);
-	const [currentUser, setCurrentUser] = useState<UserWithAlias | null>(null);
-	const [measurements, setMeasurements] = useState<any>(null);
-	const [loading, setLoading] = useState(false);
+	const router = useRouter();
 	const [error, setError] = useState<string | null>(null);
 
-	// Fetch users from API using SWR
-	const {
-		data: usersData,
-		error: usersError,
-		mutate: mutateUsers,
-	} = useSWR<{ users: User[] }>('/api/users', fetcher, {
-		revalidateOnFocus: true,
-		revalidateOnReconnect: true,
-	});
-
-	// Get user aliases from localStorage
-	const getUserAliases = (): Record<string, string> => {
-		const stored = localStorage.getItem('withings_user_aliases');
-		return stored ? JSON.parse(stored) : {};
-	};
-
-	// Save user alias to localStorage
-	const saveUserAlias = (userid: string, alias: string) => {
-		const aliases = getUserAliases();
-		aliases[userid] = alias;
-		localStorage.setItem('withings_user_aliases', JSON.stringify(aliases));
-	};
-
-	// Get users with aliases
-	const getUsersWithAliases = (): UserWithAlias[] => {
-		if (!usersData?.users) return [];
-		const aliases = getUserAliases();
-		return usersData.users.map((user) => ({
-			...user,
-			alias: aliases[user.userid] || user.username,
-		}));
-	};
-
-	// Switch to a specific user
-	const switchToUser = (userid: string) => {
-		const users = getUsersWithAliases();
-		const user = users.find((u) => u.userid === userid);
-		if (user) {
-			setCurrentUserid(userid);
-			setCurrentUser(user);
-			localStorage.setItem('withings_current_userid', userid);
-			setMeasurements(null); // Clear measurements when switching
-		}
-	};
+	// Use custom hook for users
+	const { usersWithAliases, isLoading, isError, mutate, saveUserAlias, getUserAlias } = useUsers();
 
 	useEffect(() => {
-		// Wait for users data to load
-		if (!usersData?.users) return;
-
-		const users = getUsersWithAliases();
-
-		// Check if we got tokens from the callback
+		// Handle OAuth callback
 		if (searchParams.get('success') === 'true') {
-			const userid = searchParams.get('userid') || undefined;
-			const username = searchParams.get('username') || undefined;
+			const userid = searchParams.get('userid');
+			const username = searchParams.get('username');
 
-			if (userid) {
+			if (userid && username) {
 				// Refresh users list from server
-				mutateUsers();
+				mutate();
 
 				// Check if user already has an alias
-				const aliases = getUserAliases();
-				let alias = aliases[userid];
+				let alias = getUserAlias(userid);
 
 				// Prompt for alias only if it's a new user (no alias set)
-				if (!alias && username) {
+				if (!alias || alias === userid) {
 					const promptResult = prompt(`Enter an alias for user "${username}" (e.g., "John", "Mom", etc.):`);
 					alias = promptResult || username;
 					saveUserAlias(userid, alias);
 				}
 
-				// Set as current user
-				setCurrentUserid(userid);
-				const user = users.find((u) => u.userid === userid);
-				if (user) {
-					setCurrentUser({ ...user, alias: alias || user.username });
-				}
-				localStorage.setItem('withings_current_userid', userid);
+				// Redirect to user page
+				router.push(`/user/${userid}`);
 			}
 		} else if (searchParams.get('error')) {
 			setError(searchParams.get('error') || 'Unknown error');
-		} else {
-			// Try to load the last active user
-			const lastUserid = localStorage.getItem('withings_current_userid');
-			if (lastUserid && users.length > 0) {
-				const user = users.find((u) => u.userid === lastUserid);
-				if (user) {
-					setCurrentUserid(lastUserid);
-					setCurrentUser(user);
-				} else if (users.length > 0) {
-					// Fallback to first user if last user not found
-					setCurrentUserid(users[0].userid);
-					setCurrentUser(users[0]);
-				}
-			} else if (users.length > 0) {
-				// No last user, use first available
-				setCurrentUserid(users[0].userid);
-				setCurrentUser(users[0]);
-			}
 		}
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [searchParams, usersData]);
+	}, [searchParams]);
 
 	const handleConnect = () => {
 		window.location.href = '/api/auth/withings';
 	};
 
-	const handleGetMeasurements = async () => {
-		if (!currentUserid) return;
-
-		setLoading(true);
-		setError(null);
-
-		try {
-			const thirtyDaysAgo = Math.floor(Date.now() / 1000) - 30 * 24 * 60 * 60;
-			const now = Math.floor(Date.now() / 1000);
-
-			const response = await fetch(
-				`/api/measurements?userid=${currentUserid}&startdate=${thirtyDaysAgo}&enddate=${now}`
-			);
-
-			if (!response.ok) {
-				throw new Error('Failed to fetch measurements');
-			}
-
-			const data = await response.json();
-			setMeasurements(data);
-		} catch (err) {
-			setError(err instanceof Error ? err.message : 'Failed to fetch measurements');
-		} finally {
-			setLoading(false);
-		}
+	const handleUserClick = (userid: string) => {
+		router.push(`/user/${userid}`);
 	};
 
-	const handleDisconnect = async () => {
-		if (!currentUserid) return;
+	// Format seconds into human-readable time
+	const formatTimeRemaining = (seconds: number | undefined): string => {
+		if (seconds === undefined) return 'Unknown';
+		if (seconds <= 0) return 'Expired';
 
-		// Note: We don't actually remove the user from .env.json here
-		// Just remove their alias and clear current selection
-		const aliases = getUserAliases();
-		delete aliases[currentUserid];
-		localStorage.setItem('withings_user_aliases', JSON.stringify(aliases));
+		const hours = Math.floor(seconds / 3600);
+		const minutes = Math.floor((seconds % 3600) / 60);
+		const secs = seconds % 60;
 
-		const users = getUsersWithAliases();
-
-		// Switch to another user if available, otherwise clear
-		const otherUsers = users.filter((u) => u.userid !== currentUserid);
-		if (otherUsers.length > 0) {
-			switchToUser(otherUsers[0].userid);
+		if (hours > 0) {
+			return `${hours}h ${minutes}m`;
+		} else if (minutes > 0) {
+			return `${minutes}m ${secs}s`;
 		} else {
-			setCurrentUserid(null);
-			setCurrentUser(null);
-			setMeasurements(null);
-			localStorage.removeItem('withings_current_userid');
+			return `${secs}s`;
 		}
-
-		// Refresh users list
-		mutateUsers();
-
-		window.history.replaceState({}, '', '/');
-	};
-
-	const handleAddUser = () => {
-		window.location.href = '/api/auth/withings';
 	};
 
 	return (
 		<div className="min-h-screen bg-zinc-50 p-8 font-sans dark:bg-black">
-			<main className="w-full">
+			<main className="mx-auto max-w-4xl">
 				<div className="rounded-lg bg-white p-8 shadow-sm dark:bg-zinc-900">
-					<Navbar currentUserid={currentUserid || undefined} onUserChange={switchToUser} onAddUser={handleAddUser} />
+					<h1 className="mb-6 text-3xl font-bold text-zinc-900 dark:text-zinc-50">Withings Health Monitor</h1>
 
 					{error && (
 						<div className="mb-4 rounded-md bg-red-50 p-4 dark:bg-red-900/20">
@@ -206,18 +82,18 @@ function HomeContent() {
 						</div>
 					)}
 
-					{usersError && (
+					{isError && (
 						<div className="mb-4 rounded-md bg-red-50 p-4 dark:bg-red-900/20">
-							<p className="text-sm text-red-800 dark:text-red-400">Error loading users: {usersError.message}</p>
+							<p className="text-sm text-red-800 dark:text-red-400">Error loading users: {isError.message}</p>
 						</div>
 					)}
 
-					{!usersData ? (
+					{isLoading ? (
 						<div className="flex items-center gap-2">
 							<div className="h-5 w-5 animate-spin rounded-full border-2 border-zinc-300 border-t-blue-600 dark:border-zinc-600 dark:border-t-blue-400"></div>
 							<p className="text-zinc-500 dark:text-zinc-400">Loading users...</p>
 						</div>
-					) : !currentUser ? (
+					) : usersWithAliases.length === 0 ? (
 						<div className="space-y-4">
 							<p className="text-zinc-600 dark:text-zinc-400">
 								Connect your Withings account to view your health data.
@@ -231,44 +107,78 @@ function HomeContent() {
 						</div>
 					) : (
 						<div className="space-y-6">
-							{/* Weight Chart */}
-							{currentUser.userid && <WeightChart userid={currentUser.userid} />}
-
-							<div className="space-y-3">
-								<div className="flex gap-3">
+							<div className="space-y-4">
+								<div className="flex items-center justify-between">
+									<h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">Your Accounts</h2>
 									<button
-										onClick={handleGetMeasurements}
-										disabled={loading}
-										className="rounded-md bg-blue-600 px-6 py-3 text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
+										onClick={handleConnect}
+										className="flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
 									>
-										{loading ? 'Loading...' : 'Get Measurements'}
-									</button>
-									<button
-										onClick={handleDisconnect}
-										className="rounded-md border border-zinc-300 px-6 py-3 text-zinc-700 transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
-									>
-										Disconnect
+										<svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+										</svg>
+										Add Another Account
 									</button>
 								</div>
 
-								<details className="rounded-md border border-zinc-200 p-4 dark:border-zinc-800">
-									<summary className="cursor-pointer font-medium text-zinc-900 dark:text-zinc-50">
-										View User Info
-									</summary>
-									<pre className="mt-2 overflow-x-auto text-xs text-zinc-600 dark:text-zinc-400">
-										{JSON.stringify(currentUser, null, 2)}
-									</pre>
-								</details>
+								<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+									{usersWithAliases.map((user) => (
+										<button
+											key={user.userid}
+											onClick={() => handleUserClick(user.userid)}
+											className="group relative flex flex-col items-start gap-3 rounded-lg border border-zinc-200 bg-white p-6 text-left transition-all hover:border-blue-500 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-blue-400"
+										>
+											<div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/20">
+												<svg
+													className="h-6 w-6 text-blue-600 dark:text-blue-400"
+													fill="none"
+													stroke="currentColor"
+													viewBox="0 0 24 24"
+												>
+													<path
+														strokeLinecap="round"
+														strokeLinejoin="round"
+														strokeWidth={2}
+														d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+													/>
+												</svg>
+											</div>
+											<div className="flex-1">
+												<h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">{user.alias}</h3>
+												<p className="text-sm text-zinc-500 dark:text-zinc-400">@{user.username}</p>
+												{user.expiresInSeconds !== undefined && (
+													<div className="mt-2 flex items-center gap-1">
+														<svg
+															className={`h-3 w-3 ${user.tokenExpired ? 'text-red-500' : 'text-green-500'}`}
+															fill="currentColor"
+															viewBox="0 0 20 20"
+														>
+															<path
+																fillRule="evenodd"
+																d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
+																clipRule="evenodd"
+															/>
+														</svg>
+														<span
+															className={`text-xs ${user.tokenExpired ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}
+														>
+															{user.tokenExpired
+																? 'Token expired'
+																: `Expires in ${formatTimeRemaining(user.expiresInSeconds)}`}
+														</span>
+													</div>
+												)}
+											</div>
+											<div className="flex items-center gap-2 text-sm font-medium text-blue-600 transition-colors group-hover:text-blue-700 dark:text-blue-400 dark:group-hover:text-blue-300">
+												View Dashboard
+												<svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+												</svg>
+											</div>
+										</button>
+									))}
+								</div>
 							</div>
-
-							{measurements && (
-								<div className="rounded-md border border-zinc-200 p-4 dark:border-zinc-800">
-									<h2 className="mb-3 font-semibold text-zinc-900 dark:text-zinc-50">Measurements</h2>
-									<pre className="overflow-x-auto text-xs text-zinc-600 dark:text-zinc-400">
-										{JSON.stringify(measurements, null, 2)}
-									</pre>
-								</div>
-							)}
 						</div>
 					)}
 				</div>
