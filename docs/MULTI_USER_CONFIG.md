@@ -16,10 +16,10 @@ The `scripts/fetch-year.ts` script has been updated to support multiple users in
     "userid": "1372655",
     "expires_in": "10800"
   },
-  "marina": {
+  "xxx": {
     "access_token": "xxx",
     "refresh_token": "xxx",
-    "userid": "1393344",
+    "userid": "1234567",
     "expires_in": "10800"
   }
 }
@@ -55,9 +55,6 @@ When using the multi-user format, you must specify the username as the first arg
 # Fetch data for user 'slawa' for year 2024
 npm run fetch-year slawa 2024
 
-# Fetch data for user 'marina' for year 2025
-npm run fetch-year marina 2025
-
 # Fetch data for user 'slawa' for current year (2025)
 npm run fetch-year slawa
 ```
@@ -90,7 +87,6 @@ npx tsx scripts/fetch-year.ts [username] [year]
 | `npx tsx scripts/fetch-year.ts 2024`        | `undefined` | `2024` | Legacy mode, specific year |
 | `npx tsx scripts/fetch-year.ts slawa`       | `slawa`     | `2025` | Multi-user, current year   |
 | `npx tsx scripts/fetch-year.ts slawa 2024`  | `slawa`     | `2024` | Multi-user, specific year  |
-| `npx tsx scripts/fetch-year.ts marina 2023` | `marina`    | `2023` | Multi-user, specific year  |
 
 ## Error Handling
 
@@ -99,7 +95,7 @@ npx tsx scripts/fetch-year.ts [username] [year]
 If you specify a username that doesn't exist in `.env.json`:
 
 ```
-Error: User "unknown" not found in .env.json. Available users: slawa, marina
+Error: User "unknown" not found in .env.json. Available users: slawa, xxx
 ```
 
 ### Multi-User Format Without Username
@@ -108,7 +104,7 @@ If the `.env.json` is in multi-user format but no username is provided:
 
 ```
 Error: Multi-user .env.json detected. Please provide a username.
-Available users: slawa, marina
+Available users: slawa, xxx
 Usage: npx tsx scripts/fetch-year.ts <username> [year]
 ```
 
@@ -132,7 +128,7 @@ data/
   │   ├── 2024-01.json
   │   ├── 2024-02.json
   │   └── ...
-  └── 1393344/          # marina's data
+  └── 1234567/          # xxx's data
       ├── 2024-01.json
       ├── 2024-02.json
       └── ...

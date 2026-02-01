@@ -92,10 +92,10 @@ Added new script:
     "userid": "1372655",
     "expires_in": "10800"
   },
-  "marina": {
+  "userxxx": {
     "access_token": "xxx",
     "refresh_token": "xxx",
-    "userid": "1393344",
+    "userid": "1234567",
     "expires_in": "10800"
   }
 }
@@ -123,9 +123,6 @@ npm run validate-env
 # Fetch data for Slawa, year 2024
 npm run fetch-year slawa 2024
 
-# Fetch data for Marina, year 2025
-npm run fetch-year marina 2025
-
 # Fetch data for Slawa, current year (2025)
 npm run fetch-year slawa
 ```
@@ -145,14 +142,14 @@ npm run fetch-year
 ### User Not Found
 
 ```
-✗ Error: User "unknown" not found in .env.json. Available users: slawa, marina
+✗ Error: User "unknown" not found in .env.json. Available users: slawa, xxx
 ```
 
 ### Multi-User Without Username
 
 ```
 ✗ Error: Multi-user .env.json detected. Please provide a username.
-Available users: slawa, marina
+Available users: slawa, xxx
 Usage: npx tsx scripts/fetch-year.ts <username> [year]
 ```
 
@@ -176,7 +173,7 @@ data/
   │   ├── 2024-01.json
   │   ├── 2024-02.json
   │   └── ...
-  └── 1393344/          # Marina's data (userid)
+  └── 1234567/          # xxx's data (userid)
       ├── 2024-01.json
       ├── 2024-02.json
       └── ...

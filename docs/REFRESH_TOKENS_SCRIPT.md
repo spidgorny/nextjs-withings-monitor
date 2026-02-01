@@ -46,14 +46,14 @@ Refresh tokens every 6 hours:
 ```
 🔄 Starting token refresh for all users...
 
-Found 2 user(s): slawa, marina
+Found 2 user(s): slawa, xxx
 
 📝 Processing user: slawa (userid: 1372655)
   ⏳ Refreshing access token...
   ✅ Token refreshed successfully
   📅 New expiration: Jan 24, 2026, 11:30:00 PM
 
-📝 Processing user: marina (userid: 1393344)
+📝 Processing user: xxx (userid: 1234567)
   ⏳ Refreshing access token...
   ✅ Token refreshed successfully
   📅 New expiration: Jan 24, 2026, 11:30:05 PM

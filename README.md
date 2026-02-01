@@ -9,6 +9,8 @@ A Next.js application to connect to Withings health devices and monitor your hea
 - 💾 Local data storage organized by user and month
 - 🗂️ Data persistence in JSON format
 
+![img.png](img.png)
+
 ## Setup
 
 1. **Install dependencies:**
@@ -56,10 +58,10 @@ To fetch and store a full year of data locally:
        "userid": "1372655",
        "expires_in": "10800"
      },
-     "marina": {
+     "xxx": {
        "access_token": "another_access_token",
        "refresh_token": "another_refresh_token",
-       "userid": "1393344",
+       "userid": "1234567",
        "expires_in": "10800"
      }
    }
@@ -79,7 +81,6 @@ To fetch and store a full year of data locally:
    **Multi-user format:**
    ```bash
    npm run fetch-year slawa 2024
-   npm run fetch-year marina 2025
    ```
 
    Or without specifying year (uses current year):

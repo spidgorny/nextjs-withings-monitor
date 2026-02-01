@@ -149,7 +149,7 @@ app/
 1. User on /user/1372655
 2. Clicks dropdown in Navbar
 3. Selects different user
-4. Navigate to /user/1393344
+4. Navigate to /user/1234567
 5. Page reloads with new user data
 ```
 
@@ -181,7 +181,6 @@ Only user aliases are stored. Current user is determined by URL.
 ```
 /                           → Home (user list)
 /user/1372655              → John's dashboard
-/user/1393344              → Marina's dashboard
 /?success=true&userid=...  → OAuth callback (auto-redirects)
 ```
 

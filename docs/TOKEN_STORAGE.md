@@ -104,10 +104,10 @@ This is already implemented in `lib/withings-dao.ts` and works with the new stor
     "userid": "1372655",
     "expires_in": "10800"
   },
-  "user_1393344": {  // Auto-generated username
+  "user_xxx": {  // Auto-generated username
     "access_token": "...",
     "refresh_token": "...",
-    "userid": "1393344",
+    "userid": "1234567",
     "expires_in": "10800"
   }
 }

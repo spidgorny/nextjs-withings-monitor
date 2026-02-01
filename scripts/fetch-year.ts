@@ -25,7 +25,7 @@ async function loadConfig(username?: string): Promise<EnvConfig> {
 
 		// Check if it's the new multi-user format
 		if (username) {
-			// Multi-user format: { "slawa": { access_token, userid, ... }, "marina": { ... } }
+			// Multi-user format: { "slawa": { access_token, userid, ... }, ...}
 			if (!json[username]) {
 				const availableUsers = Object.keys(json).join(', ');
 				throw new Error(`User "${username}" not found in .env.json. Available users: ${availableUsers}`);

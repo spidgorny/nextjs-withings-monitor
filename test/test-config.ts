@@ -11,11 +11,6 @@ async function testConfig() {
 	if (json[username]) {
 		console.log(`\n${username} config:`, json[username]);
 	}
-
-	const username2 = 'marina';
-	if (json[username2]) {
-		console.log(`\n${username2} config:`, json[username2]);
-	}
 }
 
 testConfig().catch(console.error);
